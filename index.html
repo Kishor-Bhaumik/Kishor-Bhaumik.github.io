@@ -85,7 +85,7 @@
         </p>
         <p align="center">
             <a href="mailto:kishor25@g.skku.edu">Email</a> &nbsp;/&nbsp;
-            <a href="">CV</a> &nbsp;/&nbsp; 
+            <a href="" onclick="openPDFModal(); return false;">CV</a> &nbsp;/&nbsp; 
             <a href="https://scholar.google.com/citations?user=g70F2XcAAAAJ&hl=en">Google Scholar</a> &nbsp;/&nbsp;
             <a href="https://github.com/Kishor-Bhaumik"> GitHub </a> &nbsp;/&nbsp;
             <a href="https://www.linkedin.com/in/kishor-kumar-bhaumik-8698491b8/">LinkedIn</a> &nbsp;/&nbsp;
@@ -362,6 +362,25 @@
         img.src = `./photos/photo_${i}.png`;
       }
     });
+
+
+
+    
+
+    <div id="pdfModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000;">
+  <div style="position:relative; width:90%; height:90%; margin:2% auto; background:white;">
+    <button onclick="closePDFModal()" style="position:absolute; top:10px; right:10px; z-index:1001; padding:10px 20px; cursor:pointer;">Close</button>
+    <embed src="https://kishor-bhaumik.github.io/cv/CV.pdf" type="application/pdf" width="100%" height="100%" />
+  </div>
+</div>
+
+<script>
+function openPDFModal() {
+  document.getElementById('pdfModal').style.display = 'block';
+}
+function closePDFModal() {
+  document.getElementById('pdfModal').style.display = 'none';
+}
   </script>
 
 </body></html>
