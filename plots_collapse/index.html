@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Training Plots — BERT 20News</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --border: #1e1e2e;
+      --accent: #7efff5;
+      --accent2: #ff6b6b;
+      --text: #e8e8f0;
+      --muted: #555570;
+      --progress-bg: #1a1a28;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(126,255,245,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(126,255,245,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+    }
+
+    header .label {
+      font-size: 0.65rem;
+      letter-spacing: 0.25em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    header h1 span {
+      color: var(--accent);
+    }
+
+    /* Main slide box */
+    .slide-box {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 0 60px rgba(126,255,245,0.05), 0 2px 40px rgba(0,0,0,0.6);
+    }
+
+    /* Top bar */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.65rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .top-bar .dots {
+      display: flex;
+      gap: 6px;
+    }
+    .top-bar .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+    .top-bar .dot:nth-child(1) { background: #ff5f57; }
+    .top-bar .dot:nth-child(2) { background: #febc2e; }
+    .top-bar .dot:nth-child(3) { background: #28c840; }
+
+    .top-bar .epoch-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+    .top-bar .epoch-label span {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* Image container */
+    .image-area {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: #08080e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .slide-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 1rem;
+      opacity: 0;
+      transition: opacity 0.45s ease;
+      pointer-events: none;
+    }
+
+    .slide-img.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Arrow buttons */
+    .arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(10,10,15,0.75);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 44px; height: 44px;
+      border-radius: 2px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      z-index: 10;
+      backdrop-filter: blur(4px);
+    }
+    .arrow:hover {
+      background: rgba(126,255,245,0.12);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .arrow.left  { left: 14px; }
+    .arrow.right { right: 14px; }
+
+    /* Bottom controls */
+    .bottom-bar {
+      padding: 1rem 1.2rem 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    /* Progress bar */
+    .progress-track {
+      width: 100%;
+      height: 3px;
+      background: var(--progress-bg);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.35s ease;
+      box-shadow: 0 0 8px rgba(126,255,245,0.5);
+    }
+
+    /* Timer bar */
+    .timer-track {
+      width: 100%;
+      height: 2px;
+      background: var(--progress-bg);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .timer-fill {
+      height: 100%;
+      background: var(--accent2);
+      border-radius: 2px;
+      width: 100%;
+      transform-origin: left;
+      box-shadow: 0 0 6px rgba(255,107,107,0.4);
+    }
+
+    .timer-fill.running {
+      animation: timerDrain 7s linear forwards;
+    }
+
+    @keyframes timerDrain {
+      from { width: 100%; }
+      to   { width: 0%; }
+    }
+
+    /* Meta row */
+    .meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .meta-row .counter {
+      font-size: 0.68rem;
+      color: var(--muted);
+    }
+    .meta-row .counter strong {
+      color: var(--text);
+    }
+
+    .meta-row .timer-label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+    .meta-row .timer-label span {
+      color: var(--accent2);
+    }
+
+    /* Dot indicators */
+    .dots-row {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 0 0.2rem;
+    }
+
+    .dot-ind {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--border);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+      border: none;
+    }
+    .dot-ind.active {
+      background: var(--accent);
+      transform: scale(1.4);
+      box-shadow: 0 0 6px rgba(126,255,245,0.5);
+    }
+    .dot-ind:hover:not(.active) {
+      background: var(--muted);
+    }
+
+    /* Footer */
+    footer {
+      font-size: 0.62rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-align: center;
+    }
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="label">Model Training Visualization</div>
+    <h1>BERT · 20 Newsgroups <span>/ 10 Epochs</span></h1>
+  </header>
+
+  <div class="slide-box">
+    <!-- Mac-style top bar -->
+    <div class="top-bar">
+      <div class="dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      <div class="epoch-label">epoch <span id="epochNum">1</span> / 30</div>
+      <div style="width:52px"></div>
+    </div>
+
+    <!-- Image area -->
+    <div class="image-area" id="imageArea">
+      <button class="arrow left"  id="btnPrev" aria-label="Previous">&#8592;</button>
+      <button class="arrow right" id="btnNext" aria-label="Next">&#8594;</button>
+    </div>
+
+    <!-- Bottom controls -->
+    <div class="bottom-bar">
+
+      <div class="meta-row">
+        <div class="counter">image <strong id="curNum">1</strong> of <strong>30</strong></div>
+        <div class="timer-label">auto-advance <span>7s</span></div>
+      </div>
+
+      <!-- Epoch progress -->
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill" style="width:3.33%"></div>
+      </div>
+
+      <!-- Timer drain -->
+      <div class="timer-track">
+        <div class="timer-fill running" id="timerFill"></div>
+      </div>
+
+      <!-- Dot indicators -->
+      <div class="dots-row" id="dotsRow"></div>
+
+    </div>
+  </div>
+
+  <footer>
+    <a href="https://kishor-bhaumik.github.io/">← back to main site</a>
+    &nbsp;·&nbsp; plots hosted at /plots/
+  </footer>
+
+</div>
+
+<script>
+  const TOTAL = 10;
+  const DELAY = 7000;
+  const BASE  = ''; // same folder — images sit alongside index.html
+
+  let current = 0;
+  let timer   = null;
+
+  // Build images
+  const imageArea = document.getElementById('imageArea');
+  const imgs = [];
+
+  for (let i = 1; i <= TOTAL; i++) {
+    const img = document.createElement('img');
+    img.src       = `${BASE}20news_bert_epoch_${i}.png`;
+    img.alt       = `Epoch ${i} training plot`;
+    img.className = 'slide-img' + (i === 1 ? ' active' : '');
+    img.loading   = 'lazy';
+    // insert before arrows
+    imageArea.insertBefore(img, imageArea.querySelector('.arrow.left'));
+    imgs.push(img);
+  }
+
+  // Build dot indicators
+  const dotsRow = document.getElementById('dotsRow');
+  const dotEls  = [];
+  for (let i = 0; i < TOTAL; i++) {
+    const d = document.createElement('button');
+    d.className = 'dot-ind' + (i === 0 ? ' active' : '');
+    d.setAttribute('aria-label', `Go to epoch ${i+1}`);
+    d.addEventListener('click', () => goTo(i));
+    dotsRow.appendChild(d);
+    dotEls.push(d);
+  }
+
+  function goTo(idx) {
+    imgs[current].classList.remove('active');
+    dotEls[current].classList.remove('active');
+
+    current = ((idx % TOTAL) + TOTAL) % TOTAL;
+
+    imgs[current].classList.add('active');
+    dotEls[current].classList.add('active');
+
+    document.getElementById('epochNum').textContent  = current + 1;
+    document.getElementById('curNum').textContent    = current + 1;
+    document.getElementById('progressFill').style.width = ((current + 1) / TOTAL * 100).toFixed(2) + '%';
+
+    resetTimer();
+  }
+
+  function next() { goTo(current + 1); }
+  function prev() { goTo(current - 1); }
+
+  function resetTimer() {
+    clearInterval(timer);
+    // Restart CSS animation by cloning the element
+    const fill = document.getElementById('timerFill');
+    const clone = fill.cloneNode(true);
+    fill.parentNode.replaceChild(clone, clone); // flush
+    // force reflow
+    void clone.offsetWidth;
+    clone.classList.add('running');
+
+    timer = setTimeout(next, DELAY);
+  }
+
+  document.getElementById('btnNext').addEventListener('click', next);
+  document.getElementById('btnPrev').addEventListener('click', prev);
+
+  // Keyboard support
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') next();
+    if (e.key === 'ArrowLeft')  prev();
+  });
+
+  // Start
+  resetTimer();
+</script>
+</body>
+</html>
